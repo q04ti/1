@@ -1,0 +1,379 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Inter:wght@400;600;700;800&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #0a0a0f;
+  color: #fff;
+}
+
+/* Scrollable for admin only */
+body.admin-page {
+  overflow: auto;
+}
+
+/* ─── Display Page ─── */
+.display-root {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #0a0a0f;
+}
+
+/* Particle canvas */
+.particle-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Vignette */
+.vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  transition: box-shadow 800ms ease, background 800ms ease;
+  border-radius: 0;
+}
+
+.vignette.positive {
+  box-shadow: inset 0 0 180px 60px rgba(255, 149, 0, 0.18);
+}
+
+.vignette.negative {
+  box-shadow: inset 0 0 180px 60px rgba(79, 195, 247, 0.18);
+}
+
+.vignette.zero {
+  box-shadow: none;
+}
+
+/* Frost overlay for negative */
+.frost-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 800ms ease;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(79, 195, 247, 0.06) 100%);
+}
+
+.frost-overlay.active {
+  opacity: 1;
+}
+
+/* Frost crack SVG borders */
+.frost-cracks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 800ms ease;
+}
+
+.frost-cracks.active {
+  opacity: 1;
+}
+
+/* Streak number wrapper */
+.streak-wrapper {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Glow aura behind number */
+.glow-aura {
+  position: absolute;
+  width: 60vw;
+  height: 60vw;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0;
+  transition: opacity 800ms ease, background 800ms ease;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.glow-aura.positive {
+  background: radial-gradient(circle, rgba(255, 180, 30, 0.55) 0%, rgba(255, 100, 0, 0.25) 50%, transparent 70%);
+  opacity: 1;
+  animation: auraPulseWarm 3s ease-in-out infinite;
+}
+
+.glow-aura.negative {
+  background: radial-gradient(circle, rgba(79, 195, 247, 0.5) 0%, rgba(120, 80, 255, 0.2) 50%, transparent 70%);
+  opacity: 1;
+  animation: auraPulseCold 3s ease-in-out infinite;
+}
+
+.glow-aura.zero {
+  opacity: 0;
+}
+
+@keyframes auraPulseWarm {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.12); opacity: 1; }
+}
+
+@keyframes auraPulseCold {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 1; }
+}
+
+/* The streak number itself */
+.streak-number {
+  font-family: 'Fredoka One', cursive;
+  font-size: clamp(20vw, 35vw, 40vw);
+  line-height: 1;
+  transition: color 800ms ease, text-shadow 800ms ease;
+  user-select: none;
+  animation: breathe 3s ease-in-out infinite;
+  will-change: transform;
+}
+
+.streak-number.positive {
+  color: #FF9500;
+  text-shadow:
+    0 0 60px rgba(255, 149, 0, 0.8),
+    0 0 120px rgba(255, 100, 0, 0.4),
+    0 0 200px rgba(255, 80, 0, 0.2);
+}
+
+.streak-number.negative {
+  color: #4FC3F7;
+  text-shadow:
+    0 0 60px rgba(79, 195, 247, 0.8),
+    0 0 120px rgba(120, 80, 255, 0.5),
+    0 0 200px rgba(79, 195, 247, 0.3);
+}
+
+.streak-number.zero {
+  color: #4a4a5a;
+  text-shadow: none;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.025); }
+}
+
+/* Count animation override */
+.streak-number.counting {
+  animation: none;
+}
+
+/* ─── Admin Page ─── */
+.admin-root {
+  min-height: 100vh;
+  background: #0a0a0f;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3rem;
+  padding: 4rem 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-root::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(255, 149, 0, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(79, 195, 247, 0.04) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.admin-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3rem;
+  width: 100%;
+  max-width: 500px;
+}
+
+.admin-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.25);
+  margin-bottom: -2rem;
+}
+
+.admin-streak-display {
+  font-family: 'Fredoka One', cursive;
+  font-size: clamp(4rem, 15vw, 9rem);
+  line-height: 1;
+  transition: color 600ms ease, text-shadow 600ms ease;
+}
+
+.admin-streak-display.positive {
+  color: #FF9500;
+  text-shadow: 0 0 40px rgba(255, 149, 0, 0.6), 0 0 80px rgba(255, 100, 0, 0.3);
+}
+.admin-streak-display.negative {
+  color: #4FC3F7;
+  text-shadow: 0 0 40px rgba(79, 195, 247, 0.6), 0 0 80px rgba(120, 80, 255, 0.3);
+}
+.admin-streak-display.zero {
+  color: #4a4a5a;
+  text-shadow: none;
+}
+
+.admin-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.pill-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 1.5rem 3rem;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #fff;
+  transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 200ms ease, filter 200ms ease;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+.pill-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.15);
+  opacity: 0;
+  transition: opacity 200ms ease;
+  border-radius: inherit;
+}
+
+.pill-btn:hover::before {
+  opacity: 1;
+}
+
+.pill-btn:active {
+  transform: scale(0.93) !important;
+}
+
+.pill-btn.success-btn {
+  background: #22c55e;
+  box-shadow: 0 4px 24px rgba(34, 197, 94, 0.35), 0 1px 0 rgba(255,255,255,0.1) inset;
+}
+
+.pill-btn.success-btn:hover {
+  box-shadow: 0 8px 36px rgba(34, 197, 94, 0.5), 0 1px 0 rgba(255,255,255,0.1) inset;
+  transform: scale(1.02);
+}
+
+.pill-btn.fail-btn {
+  background: #64748b;
+  box-shadow: 0 4px 24px rgba(100, 116, 139, 0.35), 0 1px 0 rgba(255,255,255,0.1) inset;
+}
+
+.pill-btn.fail-btn:hover {
+  box-shadow: 0 8px 36px rgba(100, 116, 139, 0.5), 0 1px 0 rgba(255,255,255,0.1) inset;
+  transform: scale(1.02);
+}
+
+.pill-btn.flashing {
+  animation: btnFlash 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes btnFlash {
+  0% { filter: brightness(1); }
+  25% { filter: brightness(1.8); }
+  60% { filter: brightness(1.3); }
+  100% { filter: brightness(1); }
+}
+
+.pill-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.admin-divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 1px;
+}
+
+.admin-footer {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.15);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  display: inline-block;
+  margin-right: 6px;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+/* Loading spinner */
+.loading-number {
+  font-family: 'Fredoka One', cursive;
+  font-size: clamp(20vw, 35vw, 40vw);
+  color: #1a1a2e;
+  animation: shimmer 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes shimmer {
+  from { opacity: 0.3; }
+  to { opacity: 0.6; }
+}
