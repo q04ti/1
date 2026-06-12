@@ -137,8 +137,6 @@ export function useParticles(canvasRef, mode) {
         for (let i = 0; i < spawnCount; i++) {
           if (currentMode === 'positive') {
             particlesRef.current.push(createEmber(canvas))
-          } else if (currentMode === 'negative') {
-            particlesRef.current.push(createCrystal(canvas))
           }
         }
       }
@@ -153,9 +151,6 @@ export function useParticles(canvasRef, mode) {
           p.wobble += p.wobbleSpeed
           p.x += Math.sin(p.wobble) * 0.4
           drawEmber(ctx, p)
-        } else {
-          p.rotation += p.rotationSpeed
-          drawCrystal(ctx, p)
         }
       }
 
