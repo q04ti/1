@@ -40,7 +40,7 @@ function FrostCracks({ active }) {
 }
 
 export default function DisplayPage() {
-  const { streak, displayedStreak, loading } = useStreak()
+  const { streak, displayedStreak, message, loading } = useStreak()
   const canvasRef = useRef(null)
 
   const mode = getMode(streak ?? 0)
@@ -81,6 +81,13 @@ export default function DisplayPage() {
           </span>
         )}
       </div>
+
+      {/* Custom Message */}
+      {message && message.trim() !== '' && !loading && (
+        <div className="custom-message">
+          {message}
+        </div>
+      )}
     </div>
   )
 }

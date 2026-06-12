@@ -42,15 +42,15 @@ function drawEmber(ctx, p) {
   ctx.save()
   ctx.globalAlpha = p.opacity * p.life
   const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2)
-  gradient.addColorStop(0, `hsla(${p.hue}, 100%, 80%, 1)`)
-  gradient.addColorStop(0.4, `hsla(${p.hue}, 100%, 55%, 0.8)`)
-  gradient.addColorStop(1, `hsla(${p.hue}, 100%, 40%, 0)`)
+  gradient.addColorStop(0, `rgba(215, 189, 134, 1)`)
+  gradient.addColorStop(0.4, `rgba(215, 189, 134, 0.8)`)
+  gradient.addColorStop(1, `rgba(215, 189, 134, 0)`)
   ctx.fillStyle = gradient
   ctx.beginPath()
   ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2)
   ctx.fill()
   // bright core
-  ctx.fillStyle = `hsla(${p.hue + 20}, 100%, 95%, 0.9)`
+  ctx.fillStyle = `rgba(215, 189, 134, 0.9)`
   ctx.beginPath()
   ctx.arc(p.x, p.y, p.size * 0.4, 0, Math.PI * 2)
   ctx.fill()
@@ -69,7 +69,7 @@ function drawCrystal(ctx, p) {
     ctx.save()
     ctx.rotate(angle)
     // main arm
-    ctx.strokeStyle = `rgba(160, 220, 255, 0.85)`
+    ctx.strokeStyle = `rgba(215, 189, 134, 0.85)`
     ctx.lineWidth = 1.2
     ctx.beginPath()
     ctx.moveTo(0, 0)
@@ -79,7 +79,7 @@ function drawCrystal(ctx, p) {
     const branchLen = len * 0.35
     const branchY = -len * 0.5
     ctx.lineWidth = 0.8
-    ctx.strokeStyle = `rgba(200, 235, 255, 0.6)`
+    ctx.strokeStyle = `rgba(215, 189, 134, 0.6)`
     ctx.beginPath()
     ctx.moveTo(0, branchY)
     ctx.lineTo(branchLen * 0.6, branchY - branchLen * 0.5)
@@ -91,7 +91,7 @@ function drawCrystal(ctx, p) {
     ctx.restore()
   }
   // glint center
-  ctx.fillStyle = `rgba(230, 245, 255, 0.9)`
+  ctx.fillStyle = `rgba(215, 189, 134, 0.9)`
   ctx.beginPath()
   ctx.arc(0, 0, p.size * 0.35, 0, Math.PI * 2)
   ctx.fill()

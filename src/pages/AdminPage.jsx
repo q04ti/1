@@ -38,8 +38,16 @@ function PillButton({ label, color, onClick, disabled }) {
 }
 
 export default function AdminPage() {
-  const { streak, displayedStreak, loading, error, updateStreak } = useStreak()
+  const { streak, displayedStreak, message, loading, error, updateStreak, updateMessage } = useStreak()
   const [busy, setBusy] = useState(false)
+  const [inputMsg, setInputMsg] = useState('')
+
+  // Sync inputMsg when message loads initially
+  useEffect(() => {
+    if (message !== undefined) {
+      setInputMsg(message)
+    }
+  }, [message])
 
   const mode = getMode(streak ?? 0)
 
@@ -66,6 +74,16 @@ export default function AdminPage() {
     try {
       const newVal = streak > 0 ? 0 : streak - 1
       await updateStreak(newVal)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleUpdateMessage = async () => {
+    if (busy) return
+    setBusy(true)
+    try {
+      await updateMessage(inputMsg)
     } finally {
       setBusy(false)
     }
@@ -113,6 +131,27 @@ export default function AdminPage() {
             onClick={handleDidntText}
             disabled={busy || loading || !!error}
           />
+        </div>
+
+        <div className="admin-divider" />
+
+        {/* Message Input */}
+        <div className="admin-message-section">
+          <input 
+            type="text" 
+            className="admin-input" 
+            placeholder="Type a custom message..." 
+            value={inputMsg}
+            onChange={(e) => setInputMsg(e.target.value)}
+            disabled={busy || loading || !!error}
+          />
+          <button 
+            className="admin-submit-btn" 
+            onClick={handleUpdateMessage}
+            disabled={busy || loading || !!error}
+          >
+            Update Message
+          </button>
         </div>
 
         <div className="admin-divider" />

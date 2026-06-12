@@ -49,6 +49,7 @@ function useSpringCounter(target) {
 
 export function useStreak() {
   const [streak, setStreak] = useState(null)
+  const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -59,13 +60,14 @@ export function useStreak() {
     async function fetchStreak() {
       const { data, error } = await supabase
         .from('streak_data')
-        .select('value')
+        .select('value, message')
         .eq('id', 1)
         .single()
       if (error) {
         setError(error.message)
       } else {
         setStreak(data.value)
+        setMessage(data.message || '')
       }
       setLoading(false)
     }
@@ -81,6 +83,7 @@ export function useStreak() {
         { event: 'UPDATE', schema: 'public', table: 'streak_data', filter: 'id=eq.1' },
         (payload) => {
           setStreak(payload.new.value)
+          setMessage(payload.new.message || '')
         }
       )
       .subscribe()
@@ -101,5 +104,14 @@ export function useStreak() {
     setStreak(newValue)
   }, [])
 
-  return { streak, displayedStreak, loading, error, updateStreak }
+  const updateMessage = useCallback(async (newMessage) => {
+    const { error } = await supabase
+      .from('streak_data')
+      .update({ message: newMessage })
+      .eq('id', 1)
+    if (error) throw error
+    setMessage(newMessage)
+  }, [])
+
+  return { streak, displayedStreak, message, loading, error, updateStreak, updateMessage }
 }
