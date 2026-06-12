@@ -102,13 +102,13 @@ export default function AdminPage() {
         {/* Buttons */}
         <div className="admin-buttons">
           <PillButton
-            label="She texted ✅"
+            label="✅"
             color="success"
             onClick={handleTexted}
             disabled={busy || loading || !!error}
           />
           <PillButton
-            label="She didn't text ❌"
+            label="❌"
             color="fail"
             onClick={handleDidntText}
             disabled={busy || loading || !!error}

@@ -68,6 +68,8 @@ export default function DisplayPage() {
 
       {/* Streak number */}
       <div className="streak-wrapper">
+
+
         {/* Glow aura */}
         <div className={`glow-aura ${mode}`} />
 
