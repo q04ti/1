@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { useStreak } from '../hooks/useStreak'
 import { useParticles } from '../hooks/useParticles'
+import flameGif from '../assets/custom/animation/streak_flame.gif'
 
 function getMode(value) {
   if (value > 0) return 'positive'
@@ -70,6 +71,8 @@ export default function DisplayPage() {
       <div className="streak-wrapper">
         {/* Glow aura */}
         <div className={`glow-aura ${mode}`} />
+
+        <img src={flameGif} alt="Flame" className="streak-flame" />
 
         {loading ? (
           <span className="loading-number">—</span>
