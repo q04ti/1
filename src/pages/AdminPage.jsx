@@ -102,13 +102,13 @@ export default function AdminPage() {
         {/* Buttons */}
         <div className="admin-buttons">
           <PillButton
-            label="✅"
+            label="She texted ✅"
             color="success"
             onClick={handleTexted}
             disabled={busy || loading || !!error}
           />
           <PillButton
-            label="❌"
+            label="She didn't text ❌"
             color="fail"
             onClick={handleDidntText}
             disabled={busy || loading || !!error}
@@ -116,6 +116,16 @@ export default function AdminPage() {
         </div>
 
         <div className="admin-divider" />
+
+        {/* Logic hint */}
+        <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontSize: '0.72rem', lineHeight: 1.8, letterSpacing: '0.03em' }}>
+          {streak !== null && (
+            <>
+              <div>✅ → {streak <= 0 ? `set to 1` : `${streak} + 1 = ${streak + 1}`}</div>
+              <div>❌ → {streak > 0 ? `set to 0` : `${streak} - 1 = ${streak - 1}`}</div>
+            </>
+          )}
+        </div>
 
         <p className="admin-footer">live · supabase realtime</p>
       </div>
