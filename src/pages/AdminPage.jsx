@@ -38,7 +38,7 @@ function PillButton({ label, color, onClick, disabled }) {
 }
 
 export default function AdminPage() {
-  const { streak, displayedStreak, message, autoConfig, loading, error, updateStreak, updateMessage, updateStreakAndAuto, toggleAutoMode } = useStreak()
+  const { streak, displayedStreak, message, loading, error, autoModeEnabled, autoModeDirection, updateStreak, updateMessage, toggleAutoMode } = useStreak()
   const [busy, setBusy] = useState(false)
   const [inputMsg, setInputMsg] = useState('')
 
@@ -62,11 +62,7 @@ export default function AdminPage() {
     setBusy(true)
     try {
       const newVal = streak <= 0 ? 1 : streak + 1
-      if (updateStreakAndAuto) {
-        await updateStreakAndAuto(newVal, 1)
-      } else {
-        await updateStreak(newVal)
-      }
+      await updateStreak(newVal, 1)
     } finally {
       setBusy(false)
     }
@@ -77,11 +73,7 @@ export default function AdminPage() {
     setBusy(true)
     try {
       const newVal = streak > 0 ? 0 : streak - 1
-      if (updateStreakAndAuto) {
-        await updateStreakAndAuto(newVal, -1)
-      } else {
-        await updateStreak(newVal)
-      }
+      await updateStreak(newVal, -1)
     } finally {
       setBusy(false)
     }
@@ -97,16 +89,6 @@ export default function AdminPage() {
     }
   }
 
-  const handleToggleAuto = async () => {
-    if (busy || streak === null) return
-    setBusy(true)
-    try {
-      await toggleAutoMode(!autoConfig.enabled, streak)
-    } finally {
-      setBusy(false)
-    }
-  }
-
   return (
     <div className="admin-root">
       <div className="admin-content">
@@ -116,8 +98,15 @@ export default function AdminPage() {
             <span className="status-dot" />
             streak system · admin
           </p>
+          {autoModeEnabled && (
+            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+              <span className={`status-dot ${autoModeDirection > 0 ? 'success' : 'fail'}`} />
+              Auto Mode Active ({autoModeDirection > 0 ? '+1/day' : '-1/day'})
+            </div>
+          )}
         </div>
 
+        {/* Current streak display */}
         <div style={{ textAlign: 'center' }}>
           {loading ? (
             <span className="admin-streak-display zero">—</span>
@@ -132,72 +121,41 @@ export default function AdminPage() {
           )}
         </div>
 
-        {/* Auto Mode Indicator */}
-        {!loading && !error && autoConfig && (
-          <div style={{ textAlign: 'center', marginTop: '-1rem', marginBottom: '1rem' }}>
-            {autoConfig.enabled ? (
-              <span style={{ 
-                fontSize: '0.8rem', 
-                color: autoConfig.direction > 0 ? '#4caf50' : '#f44336',
-                background: 'rgba(255,255,255,0.05)',
-                padding: '4px 12px',
-                borderRadius: '12px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
-                <span className="status-dot" style={{ background: autoConfig.direction > 0 ? '#4caf50' : '#f44336' }} />
-                AUTO {autoConfig.direction > 0 ? 'UP' : 'DOWN'}
-              </span>
-            ) : (
-              <span style={{ 
-                fontSize: '0.8rem', 
-                color: 'rgba(255,255,255,0.3)',
-                background: 'rgba(255,255,255,0.02)',
-                padding: '4px 12px',
-                borderRadius: '12px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
-                AUTO OFF
-              </span>
-            )}
-          </div>
-        )}
-
         <div className="admin-divider" />
 
         {/* Buttons */}
-        <div className="admin-buttons">
-          <PillButton
-            label="✅"
-            color="success"
-            onClick={handleTexted}
-            disabled={busy || loading || !!error}
-          />
-          <PillButton
-            label="❌"
-            color="fail"
-            onClick={handleDidntText}
-            disabled={busy || loading || !!error}
-          />
-        </div>
-        
-        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+        <div className="admin-buttons" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+            <PillButton
+              label="✅"
+              color="success"
+              onClick={handleTexted}
+              disabled={busy || loading || !!error}
+            />
+            <PillButton
+              label="❌"
+              color="fail"
+              onClick={handleDidntText}
+              disabled={busy || loading || !!error}
+            />
+          </div>
+          
           <button 
             className="admin-submit-btn" 
-            onClick={handleToggleAuto}
+            onClick={toggleAutoMode}
             disabled={busy || loading || !!error}
             style={{ 
-              background: autoConfig?.enabled ? 'rgba(255,255,255,0.1)' : 'transparent',
-              border: '1px solid rgba(255,255,255,0.2)',
-              color: autoConfig?.enabled ? '#fff' : 'rgba(255,255,255,0.5)',
-              padding: '0.6rem 1.2rem',
-              width: 'auto'
+              backgroundColor: autoModeEnabled ? 'rgba(0, 255, 128, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+              color: autoModeEnabled ? '#00ff80' : 'rgba(255,255,255,0.6)',
+              border: `1px solid ${autoModeEnabled ? 'rgba(0,255,128,0.3)' : 'rgba(255,255,255,0.1)'}`,
+              alignSelf: 'center',
+              width: '100%',
+              padding: '0.8rem',
+              letterSpacing: '0.05em',
+              fontWeight: 600
             }}
           >
-            {autoConfig?.enabled ? 'DISABLE AUTO MODE' : 'ENABLE AUTO MODE'}
+            AUTO MODE {autoModeEnabled ? 'ON' : 'OFF'}
           </button>
         </div>
 

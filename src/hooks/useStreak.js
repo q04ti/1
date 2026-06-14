@@ -50,59 +50,67 @@ function useSpringCounter(target) {
 export function useStreak() {
   const [streak, setStreak] = useState(null)
   const [message, setMessage] = useState('')
-  const [autoConfig, setAutoConfig] = useState({ enabled: false, direction: 1, lastUpdate: null })
+  const [autoModeEnabled, setAutoModeEnabled] = useState(false)
+  const [autoModeDirection, setAutoModeDirection] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const displayedStreak = useSpringCounter(streak ?? 0)
+
+  const getLocalYMD = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  const parseYMD = (ymdStr) => {
+    const [y, m, d] = ymdStr.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  };
 
   // Fetch initial value
   useEffect(() => {
     async function fetchStreak() {
       const { data, error } = await supabase
         .from('streak_data')
-        .select('value, message, auto_mode_enabled, auto_mode_direction, last_auto_update_date')
+        .select('*')
         .eq('id', 1)
         .single()
       if (error) {
         setError(error.message)
       } else {
-        let currentStreak = data.value
-        const isAutoEnabled = !!data.auto_mode_enabled
-        const autoDirection = data.auto_mode_direction ?? 1
-        let lastAutoUpdate = data.last_auto_update_date
+        let currentValue = data.value;
+        const todayStr = getLocalYMD();
+        let shouldUpdateDB = false;
+        let newDateStr = data.last_auto_update_date;
 
-        let shouldUpdateDb = false
-
-        if (isAutoEnabled && lastAutoUpdate) {
-          const today = new Date().toLocaleDateString('en-CA') // YYYY-MM-DD
-          if (lastAutoUpdate !== today) {
-            const lastDate = new Date(lastAutoUpdate)
-            const currentDate = new Date(today)
-            const diffTime = currentDate - lastDate
-            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+        if (data.auto_mode_enabled) {
+          if (data.last_auto_update_date && data.last_auto_update_date !== todayStr) {
+            const lastUpdateDate = parseYMD(data.last_auto_update_date);
+            const todayDate = parseYMD(todayStr);
+            const diffDays = Math.round((todayDate - lastUpdateDate) / (1000 * 60 * 60 * 24));
             
             if (diffDays > 0) {
-              currentStreak = currentStreak + (diffDays * autoDirection)
-              lastAutoUpdate = today
-              shouldUpdateDb = true
-            } else if (diffDays < 0) {
-              lastAutoUpdate = today
-              shouldUpdateDb = true
+              currentValue += (diffDays * data.auto_mode_direction);
+              shouldUpdateDB = true;
+              newDateStr = todayStr;
             }
+          } else if (!data.last_auto_update_date) {
+            shouldUpdateDB = true;
+            newDateStr = todayStr;
           }
         }
 
-        setStreak(currentStreak)
-        setMessage(data.message || '')
-        setAutoConfig({ enabled: isAutoEnabled, direction: autoDirection, lastUpdate: lastAutoUpdate })
-
-        if (shouldUpdateDb) {
-          supabase.from('streak_data').update({
-            value: currentStreak,
-            last_auto_update_date: lastAutoUpdate
-          }).eq('id', 1).then() // Fire and forget update
+        if (shouldUpdateDB) {
+          await supabase.from('streak_data').update({
+            value: currentValue,
+            last_auto_update_date: newDateStr
+          }).eq('id', 1);
         }
+
+        setStreak(currentValue)
+        setMessage(data.message || '')
+        setAutoModeEnabled(data.auto_mode_enabled || false)
+        setAutoModeDirection(data.auto_mode_direction || 1)
       }
       setLoading(false)
     }
@@ -119,11 +127,8 @@ export function useStreak() {
         (payload) => {
           setStreak(payload.new.value)
           setMessage(payload.new.message || '')
-          setAutoConfig({
-            enabled: !!payload.new.auto_mode_enabled,
-            direction: payload.new.auto_mode_direction ?? 1,
-            lastUpdate: payload.new.last_auto_update_date
-          })
+          setAutoModeEnabled(payload.new.auto_mode_enabled || false)
+          setAutoModeDirection(payload.new.auto_mode_direction || 1)
         }
       )
       .subscribe()
@@ -134,14 +139,24 @@ export function useStreak() {
   }, [])
 
   // Update streak value in DB
-  const updateStreak = useCallback(async (newValue) => {
+  const updateStreak = useCallback(async (newValue, autoDirection) => {
+    const updatePayload = { value: newValue }
+    if (autoDirection !== undefined) {
+      updatePayload.auto_mode_direction = autoDirection
+      updatePayload.last_auto_update_date = getLocalYMD()
+    }
+
     const { error } = await supabase
       .from('streak_data')
-      .update({ value: newValue })
+      .update(updatePayload)
       .eq('id', 1)
     if (error) throw error
-    // Optimistically update local state too (realtime will confirm)
+    
+    // Optimistically update
     setStreak(newValue)
+    if (autoDirection !== undefined) {
+      setAutoModeDirection(autoDirection)
+    }
   }, [])
 
   const updateMessage = useCallback(async (newMessage) => {
@@ -153,40 +168,29 @@ export function useStreak() {
     setMessage(newMessage)
   }, [])
 
-  const updateStreakAndAuto = useCallback(async (newStreak, newDirection) => {
-    // Only update direction if auto mode is on (so manual toggles during off mode don't change anything? 
-    // Wait, requirement: "When I manually press a button while auto mode is on, the auto direction updates")
+  const toggleAutoMode = useCallback(async () => {
+    const newEnabled = !autoModeEnabled;
     const { error } = await supabase
       .from('streak_data')
       .update({ 
-        value: newStreak, 
-        ...(autoConfig.enabled ? { auto_mode_direction: newDirection } : {}) 
+        auto_mode_enabled: newEnabled,
+        last_auto_update_date: newEnabled ? getLocalYMD() : null 
       })
       .eq('id', 1)
     if (error) throw error
-    setStreak(newStreak)
-    if (autoConfig.enabled) {
-      setAutoConfig(prev => ({ ...prev, direction: newDirection }))
-    }
-  }, [autoConfig.enabled])
-
-  const toggleAutoMode = useCallback(async (enabled, currentStreak) => {
-    const today = new Date().toLocaleDateString('en-CA')
-    const direction = currentStreak > 0 ? 1 : -1
-    const { error } = await supabase
-      .from('streak_data')
-      .update({
-        auto_mode_enabled: enabled,
-        auto_mode_direction: direction,
-        last_auto_update_date: today
-      })
-      .eq('id', 1)
-    if (error) throw error
-    setAutoConfig({ enabled, direction, lastUpdate: today })
-  }, [])
+    setAutoModeEnabled(newEnabled)
+  }, [autoModeEnabled])
 
   return { 
-    streak, displayedStreak, message, autoConfig, loading, error, 
-    updateStreak, updateMessage, updateStreakAndAuto, toggleAutoMode 
+    streak, 
+    displayedStreak, 
+    message, 
+    loading, 
+    error, 
+    autoModeEnabled, 
+    autoModeDirection, 
+    updateStreak, 
+    updateMessage,
+    toggleAutoMode 
   }
 }
