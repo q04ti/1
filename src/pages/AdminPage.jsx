@@ -38,7 +38,11 @@ function PillButton({ label, color, onClick, disabled }) {
 }
 
 export default function AdminPage() {
-  const { streak, displayedStreak, message, loading, error, updateStreak, updateMessage } = useStreak()
+  const { 
+    streak, displayedStreak, message, loading, error, 
+    updateStreak, updateMessage, updateAutoMode,
+    autoModeEnabled, autoModeDirection 
+  } = useStreak()
   const [busy, setBusy] = useState(false)
   const [inputMsg, setInputMsg] = useState('')
 
@@ -63,6 +67,9 @@ export default function AdminPage() {
     try {
       const newVal = streak <= 0 ? 1 : streak + 1
       await updateStreak(newVal)
+      if (autoModeEnabled) {
+        await updateAutoMode({ direction: 'up' })
+      }
     } finally {
       setBusy(false)
     }
@@ -74,8 +81,41 @@ export default function AdminPage() {
     try {
       const newVal = streak > 0 ? 0 : streak - 1
       await updateStreak(newVal)
+      if (autoModeEnabled) {
+        await updateAutoMode({ direction: 'down' })
+      }
     } finally {
       setBusy(false)
+    }
+  }
+
+  const toggleAutoMode = async () => {
+    if (busy || loading) return
+    setBusy(true)
+    try {
+      await updateAutoMode({ enabled: !autoModeEnabled })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  let autoModeStatusStr = 'Auto mode: OFF'
+  let autoModeDotClass = 'gray'
+  let autoModeTextColor = 'rgba(255,255,255,0.4)'
+  
+  if (autoModeEnabled) {
+    if (autoModeDirection === 'up') {
+      autoModeStatusStr = 'Auto mode: ON · Trending UP (+1/day)'
+      autoModeDotClass = 'green pulse'
+      autoModeTextColor = '#22c55e'
+    } else if (autoModeDirection === 'down') {
+      autoModeStatusStr = 'Auto mode: ON · Trending DOWN (−1/day)'
+      autoModeDotClass = 'red pulse'
+      autoModeTextColor = '#ef4444'
+    } else {
+      autoModeStatusStr = 'Auto mode: ON · Press a button to set direction'
+      autoModeDotClass = 'gray pulse'
+      autoModeTextColor = 'rgba(255,255,255,0.6)'
     }
   }
 
@@ -131,6 +171,23 @@ export default function AdminPage() {
             onClick={handleDidntText}
             disabled={busy || loading || !!error}
           />
+        </div>
+
+        <div className="admin-divider" />
+
+        {/* Auto Mode Toggle */}
+        <div className="admin-auto-mode-section">
+          <button 
+            className={`auto-mode-toggle ${autoModeEnabled ? 'on' : 'off'}`}
+            onClick={toggleAutoMode}
+            disabled={busy || loading || !!error}
+          >
+            <span className={`status-dot ${autoModeDotClass}`} />
+            AUTO MODE: {autoModeEnabled ? 'ON' : 'OFF'}
+          </button>
+          <div className="auto-mode-status-text" style={{ color: autoModeTextColor }}>
+            {autoModeStatusStr}
+          </div>
         </div>
 
         <div className="admin-divider" />

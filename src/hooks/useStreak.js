@@ -53,6 +53,10 @@ export function useStreak() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  const [autoModeEnabled, setAutoModeEnabled] = useState(false)
+  const [autoModeDirection, setAutoModeDirection] = useState(null)
+  const [lastAutoRunDate, setLastAutoRunDate] = useState(null)
+
   const displayedStreak = useSpringCounter(streak ?? 0)
 
   // Fetch initial value
@@ -60,7 +64,7 @@ export function useStreak() {
     async function fetchStreak() {
       const { data, error } = await supabase
         .from('streak_data')
-        .select('value, message')
+        .select('value, message, auto_mode_enabled, auto_mode_direction, last_auto_run_date')
         .eq('id', 1)
         .single()
       if (error) {
@@ -68,6 +72,14 @@ export function useStreak() {
       } else {
         setStreak(data.value)
         setMessage(data.message || '')
+        setAutoModeEnabled(data.auto_mode_enabled || false)
+        setAutoModeDirection(data.auto_mode_direction || null)
+        setLastAutoRunDate(data.last_auto_run_date || null)
+        
+        // Mirror to localStorage as requested
+        localStorage.setItem('autoModeEnabled', data.auto_mode_enabled || false)
+        localStorage.setItem('autoModeDirection', data.auto_mode_direction || '')
+        localStorage.setItem('lastAutoRunDate', data.last_auto_run_date || '')
       }
       setLoading(false)
     }
@@ -84,6 +96,9 @@ export function useStreak() {
         (payload) => {
           setStreak(payload.new.value)
           setMessage(payload.new.message || '')
+          setAutoModeEnabled(payload.new.auto_mode_enabled || false)
+          setAutoModeDirection(payload.new.auto_mode_direction || null)
+          setLastAutoRunDate(payload.new.last_auto_run_date || null)
         }
       )
       .subscribe()
@@ -113,5 +128,73 @@ export function useStreak() {
     setMessage(newMessage)
   }, [])
 
-  return { streak, displayedStreak, message, loading, error, updateStreak, updateMessage }
+  const updateAutoMode = useCallback(async ({ enabled, direction, lastRunDate }) => {
+    const updates = {}
+    if (enabled !== undefined) updates.auto_mode_enabled = enabled
+    if (direction !== undefined) updates.auto_mode_direction = direction
+    if (lastRunDate !== undefined) updates.last_auto_run_date = lastRunDate
+
+    const { error } = await supabase
+      .from('streak_data')
+      .update(updates)
+      .eq('id', 1)
+    if (error) throw error
+
+    if (enabled !== undefined) {
+      setAutoModeEnabled(enabled)
+      localStorage.setItem('autoModeEnabled', enabled)
+    }
+    if (direction !== undefined) {
+      setAutoModeDirection(direction)
+      localStorage.setItem('autoModeDirection', direction || '')
+    }
+    if (lastRunDate !== undefined) {
+      setLastAutoRunDate(lastRunDate)
+      localStorage.setItem('lastAutoRunDate', lastRunDate || '')
+    }
+  }, [])
+
+  // Midnight tick logic on load
+  useEffect(() => {
+    if (loading || !autoModeEnabled || !autoModeDirection || streak === null) return
+
+    const d = new Date()
+    const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+    if (!lastAutoRunDate) {
+      updateAutoMode({ lastRunDate: todayStr })
+      return
+    }
+
+    if (todayStr > lastAutoRunDate) {
+      const today = new Date(todayStr)
+      const lastRun = new Date(lastAutoRunDate)
+      const diffTime = Math.abs(today - lastRun)
+      const daysPassed = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+
+      if (daysPassed > 0) {
+        let newStreak = streak + (autoModeDirection === 'up' ? daysPassed : -daysPassed)
+        if (newStreak < 0) newStreak = 0
+
+        const runUpdate = async () => {
+          const { error } = await supabase
+            .from('streak_data')
+            .update({ value: newStreak, last_auto_run_date: todayStr })
+            .eq('id', 1)
+          if (!error) {
+            setStreak(newStreak)
+            setLastAutoRunDate(todayStr)
+            localStorage.setItem('lastAutoRunDate', todayStr)
+          }
+        }
+        runUpdate()
+      }
+    }
+  }, [loading, autoModeEnabled, autoModeDirection, lastAutoRunDate, streak, updateAutoMode])
+
+  return { 
+    streak, displayedStreak, message, loading, error, 
+    updateStreak, updateMessage, updateAutoMode, 
+    autoModeEnabled, autoModeDirection, lastAutoRunDate 
+  }
 }
