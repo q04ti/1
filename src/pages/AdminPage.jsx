@@ -30,6 +30,11 @@ function PillButton({ label, color, onClick, disabled }) {
         transition: pressing
           ? 'transform 80ms ease-in'
           : 'transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 200ms ease, filter 200ms ease',
+        width: '100%',
+        padding: '0.8rem',
+        fontSize: '1.1rem',
+        marginTop: '1rem',
+        borderRadius: '12px'
       }}
     >
       {label}
@@ -39,11 +44,13 @@ function PillButton({ label, color, onClick, disabled }) {
 
 export default function AdminPage() {
   const { 
-    streak, displayedStreak, message, loading, error, 
-    updateStreak, updateMessage, updateAutoMode,
-    autoModeEnabled, autoModeDirection 
+    streak: daysRemaining, displayedStreak, message, loading, error, 
+    updateStreak, updateMessage, updateAutoMode
   } = useStreak()
+  
   const [busy, setBusy] = useState(false)
+  const [targetDays, setTargetDays] = useState('')
+  const [targetDate, setTargetDate] = useState('')
   const [inputMsg, setInputMsg] = useState('')
 
   // Sync inputMsg when message loads initially
@@ -53,7 +60,7 @@ export default function AdminPage() {
     }
   }, [message])
 
-  const mode = getMode(streak ?? 0)
+  const mode = getMode(daysRemaining ?? 0)
 
   // Set body class for scrolling
   useEffect(() => {
@@ -61,61 +68,41 @@ export default function AdminPage() {
     return () => document.body.classList.remove('admin-page')
   }, [])
 
-  const handleTexted = async () => {
-    if (busy || streak === null) return
+  const handleStartCountdown = async () => {
+    if (busy) return
+    
+    let days = null
+    if (targetDays) {
+      days = parseInt(targetDays, 10)
+    } else if (targetDate) {
+      const today = new Date()
+      // Calculate start of today for accurate day difference
+      today.setHours(0, 0, 0, 0)
+      const target = new Date(targetDate)
+      target.setHours(0, 0, 0, 0)
+      const diffTime = target - today
+      days = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    }
+    
+    if (days === null || isNaN(days) || days < 0) return
+
     setBusy(true)
     try {
-      const newVal = streak <= 0 ? 1 : streak + 1
-      await updateStreak(newVal)
-      if (autoModeEnabled) {
-        await updateAutoMode({ direction: 'up' })
+      await updateStreak(days)
+      if (inputMsg !== message) {
+        await updateMessage(inputMsg)
       }
+      // Enable auto mode downwards to decrement daily
+      const d = new Date()
+      const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      await updateAutoMode({ enabled: true, direction: 'down', lastRunDate: todayStr })
+      
+      setTargetDays('')
+      setTargetDate('')
+    } catch (err) {
+      console.error(err)
     } finally {
       setBusy(false)
-    }
-  }
-
-  const handleDidntText = async () => {
-    if (busy || streak === null) return
-    setBusy(true)
-    try {
-      const newVal = streak > 0 ? 0 : streak - 1
-      await updateStreak(newVal)
-      if (autoModeEnabled) {
-        await updateAutoMode({ direction: 'down' })
-      }
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const toggleAutoMode = async () => {
-    if (busy || loading) return
-    setBusy(true)
-    try {
-      await updateAutoMode({ enabled: !autoModeEnabled })
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  let autoModeStatusStr = 'Auto mode: OFF'
-  let autoModeDotClass = 'gray'
-  let autoModeTextColor = 'rgba(255,255,255,0.4)'
-  
-  if (autoModeEnabled) {
-    if (autoModeDirection === 'up') {
-      autoModeStatusStr = 'Auto mode: ON · Trending UP (+1/day)'
-      autoModeDotClass = 'green pulse'
-      autoModeTextColor = '#22c55e'
-    } else if (autoModeDirection === 'down') {
-      autoModeStatusStr = 'Auto mode: ON · Trending DOWN (−1/day)'
-      autoModeDotClass = 'red pulse'
-      autoModeTextColor = '#ef4444'
-    } else {
-      autoModeStatusStr = 'Auto mode: ON · Press a button to set direction'
-      autoModeDotClass = 'gray pulse'
-      autoModeTextColor = 'rgba(255,255,255,0.6)'
     }
   }
 
@@ -135,12 +122,12 @@ export default function AdminPage() {
         {/* Header */}
         <div style={{ textAlign: 'center' }}>
           <p className="admin-label">
-            <span className="status-dot" />
-            streak system · admin
+            <span className="status-dot green pulse" />
+            countdown · admin
           </p>
         </div>
 
-        {/* Current streak display */}
+        {/* Current display */}
         <div style={{ textAlign: 'center' }}>
           {loading ? (
             <span className="admin-streak-display zero">—</span>
@@ -157,47 +144,59 @@ export default function AdminPage() {
 
         <div className="admin-divider" />
 
-        {/* Buttons */}
-        <div className="admin-buttons">
-          <PillButton
-            label="✅"
-            color="success"
-            onClick={handleTexted}
-            disabled={busy || loading || !!error}
-          />
-          <PillButton
-            label="❌"
-            color="fail"
-            onClick={handleDidntText}
-            disabled={busy || loading || !!error}
-          />
-        </div>
-
-        <div className="admin-divider" />
-
-        {/* Auto Mode Toggle */}
-        <div className="admin-auto-mode-section">
-          <button 
-            className={`auto-mode-toggle ${autoModeEnabled ? 'on' : 'off'}`}
-            onClick={toggleAutoMode}
-            disabled={busy || loading || !!error}
-          >
-            <span className={`status-dot ${autoModeDotClass}`} />
-            AUTO MODE: {autoModeEnabled ? 'ON' : 'OFF'}
-          </button>
-          <div className="auto-mode-status-text" style={{ color: autoModeTextColor }}>
-            {autoModeStatusStr}
+        {/* Setup Section */}
+        <div className="admin-setup-section" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <h3 style={{ margin: 0, fontSize: '1rem', color: 'rgba(255,255,255,0.8)' }}>Set New Countdown</h3>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <label style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>Target Days</label>
+            <input 
+              type="number" 
+              className="admin-input" 
+              placeholder="e.g. 37" 
+              value={targetDays}
+              onChange={(e) => {
+                setTargetDays(e.target.value)
+                setTargetDate('') // clear date if days are set
+              }}
+              disabled={busy || loading || !!error}
+            />
           </div>
+
+          <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem' }}>OR</div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <label style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>Target Date</label>
+            <input 
+              type="date" 
+              className="admin-input" 
+              value={targetDate}
+              onChange={(e) => {
+                setTargetDate(e.target.value)
+                setTargetDays('') // clear days if date is set
+              }}
+              disabled={busy || loading || !!error}
+              style={{ colorScheme: 'dark' }}
+            />
+          </div>
+
+          <PillButton
+            label="Start Countdown"
+            color="success"
+            onClick={handleStartCountdown}
+            disabled={busy || loading || !!error || (!targetDays && !targetDate)}
+          />
         </div>
 
         <div className="admin-divider" />
 
         {/* Message Input */}
         <div className="admin-message-section">
+          <label style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '0.5rem' }}>Display Message</label>
           <input 
             type="text" 
             className="admin-input" 
-            placeholder="Type a custom message..." 
+            placeholder="e.g. days until my birthday..." 
             value={inputMsg}
             onChange={(e) => setInputMsg(e.target.value)}
             disabled={busy || loading || !!error}
@@ -206,21 +205,10 @@ export default function AdminPage() {
             className="admin-submit-btn" 
             onClick={handleUpdateMessage}
             disabled={busy || loading || !!error}
+            style={{ marginTop: '0.5rem' }}
           >
             Update Message
           </button>
-        </div>
-
-        <div className="admin-divider" />
-
-        {/* Logic hint */}
-        <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontSize: '0.72rem', lineHeight: 1.8, letterSpacing: '0.03em' }}>
-          {streak !== null && (
-            <>
-              <div>✅ → {streak <= 0 ? `set to 1` : `${streak} + 1 = ${streak + 1}`}</div>
-              <div>❌ → {streak > 0 ? `set to 0` : `${streak} - 1 = ${streak - 1}`}</div>
-            </>
-          )}
         </div>
 
         <p className="admin-footer">live · supabase realtime</p>
