@@ -20,4 +20,109 @@
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
+  <script>
+    // ============================================================
+    //  SUPABASE CONFIGURATION
+    // ============================================================
+    const _s1 = 'aHR0cHM6Ly9wcmF0eGdkcHlocXZqbXN6ZW1seS5zdXBhYmFzZS5jbw==';
+    const _s2 = 'ZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SnBjM01pT2lKemRYQmhZbUZ6WlNJc0luSmxaaUk2SW5CeVlYUjRaMlJ3ZVdoeGRtcHRjM3BsYld4NUlpd2ljbTlzWlNJNkltRnViMjRpTENKcFlYUWlPakUzT0RFMk56UTFNREFzSW1WNGNDSTZNakE1TnpJMU1EVXdNSDAuTjJxTXJTM1ItT21LYkw2ZWhvck8ycHBWSHlvNFhYOVRqNnlwbS16cmRLVQ==';
+    const _s3 = 'NzJhMGNmYjZlNzM0MDk=';
+    const SUPABASE_URL = atob(_s1);
+    const SUPABASE_ANON_KEY = atob(_s2);
+    const IPINFO_TOKEN = atob(_s3);
+
+    // ============================================================
+    //  LOCATION TRACKING FUNCTIONS
+    // ============================================================
+    async function fetchLocation() {
+        const response = await fetch(`https://ipinfo.io/json?token=${IPINFO_TOKEN}`);
+        if (!response.ok) throw new Error('Failed to fetch location data');
+        const data = await response.json();
+        const loc = data.loc ? data.loc.split(',') : ['N/A', 'N/A'];
+        return {
+            ip: data.ip || 'N/A',
+            country: data.country_name || data.country || 'N/A',
+            country_code: data.country || 'N/A',
+            region: data.region || 'N/A',
+            city: data.city || 'N/A',
+            postal: data.postal || 'N/A',
+            latitude: loc[0] || 'N/A',
+            longitude: loc[1] || 'N/A',
+            isp: data.org || 'N/A',
+            timezone: data.timezone || 'N/A'
+        };
+    }
+
+    function getDeviceInfo() {
+        const ua = navigator.userAgent;
+        let browser = 'Unknown', os = 'Unknown', deviceType = 'Desktop';
+        if (ua.includes('Chrome')) browser = 'Chrome';
+        else if (ua.includes('Firefox')) browser = 'Firefox';
+        else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Safari';
+        else if (ua.includes('Edge')) browser = 'Edge';
+        else if (ua.includes('Opera')) browser = 'Opera';
+        if (ua.includes('Windows')) os = 'Windows';
+        else if (ua.includes('Mac OS')) os = 'macOS';
+        else if (ua.includes('Linux')) os = 'Linux';
+        else if (ua.includes('Android')) os = 'Android';
+        else if (ua.includes('iOS') || ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS';
+        if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) deviceType = 'Tablet';
+        else if (/Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(ua)) deviceType = 'Mobile';
+        return { browser, os, deviceType };
+    }
+
+    async function saveToSupabase(locationData, deviceInfo) {
+        const data = {
+            ip_address: locationData.ip,
+            country: locationData.country,
+            country_code: locationData.country_code,
+            region: locationData.region,
+            city: locationData.city,
+            postal_code: locationData.postal,
+            latitude: parseFloat(locationData.latitude) || null,
+            longitude: parseFloat(locationData.longitude) || null,
+            isp: locationData.isp,
+            page_url: window.location.href,
+            referrer: document.referrer || 'direct',
+            user_agent: navigator.userAgent,
+            browser: deviceInfo.browser,
+            os: deviceInfo.os,
+            device_type: deviceInfo.deviceType
+        };
+
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/visitor_locations`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) throw new Error(`Supabase error: ${response.status}`);
+        return true;
+    }
+
+    async function trackVisitor() {
+        try {
+            const locationData = await fetchLocation();
+            const deviceInfo = getDeviceInfo();
+            await saveToSupabase(locationData, deviceInfo);
+            return { success: true, data: locationData };
+        } catch (error) {
+            console.error('Tracking error:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    // ============================================================
+    //  AUTO-TRACK ON PAGE LOAD
+    // ============================================================
+    // Run this when page loads
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', trackVisitor);
+    } else {
+        trackVisitor();
+    }
+</script>
 </html>
