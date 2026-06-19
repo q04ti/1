@@ -11,7 +11,7 @@ function getMode(value) {
 export default function DisplayPage() {
   const { streak, displayedStreak, message, loading } = useStreak()
   const canvasRef = useRef(null)
-  const [timeLeft, setTimeLeft] = useState('')
+  const [timeLeft, setTimeLeft] = useState('--:--:--')
 
   const mode = getMode(streak ?? 0)
   useParticles(canvasRef, mode)
@@ -75,19 +75,19 @@ export default function DisplayPage() {
         </div>
 
         {/* Exact timer */}
-        {!loading && (
-          <div className="exact-timer" style={{
-            fontFamily: 'Inter, sans-serif',
-            fontSize: '2rem',
-            fontWeight: '600',
-            letterSpacing: '0.1em',
-            color: 'rgba(53, 44, 36, 0.7)',
-            marginTop: '-1rem',
-            animation: 'fadeIn 1s ease-out'
-          }}>
-            {timeLeft}
-          </div>
-        )}
+        <div className="exact-timer" style={{
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '1.4rem',
+          fontWeight: '600',
+          letterSpacing: '0.1em',
+          color: 'rgba(53, 44, 36, 0.7)',
+          marginTop: '-1rem',
+          textAlign: 'center',
+          opacity: loading ? 0 : 1,
+          transition: 'opacity 1s ease-out'
+        }}>
+          {timeLeft}
+        </div>
       </div>
 
       {/* Custom Message */}
