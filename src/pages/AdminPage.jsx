@@ -45,7 +45,7 @@ function PillButton({ label, color, onClick, disabled }) {
 export default function AdminPage() {
   const { 
     streak: daysRemaining, displayedStreak, message, loading, error, 
-    updateStreak, updateMessage, updateAutoMode
+    updateStreak, updateMessage, updateAutoMode, updateAll
   } = useStreak()
   
   const [busy, setBusy] = useState(false)
@@ -78,8 +78,12 @@ export default function AdminPage() {
       const today = new Date()
       // Calculate start of today for accurate day difference
       today.setHours(0, 0, 0, 0)
-      const target = new Date(targetDate)
+      
+      // Parse YYYY-MM-DD locally to avoid UTC shifts
+      const [year, month, day] = targetDate.split('-').map(Number)
+      const target = new Date(year, month - 1, day)
       target.setHours(0, 0, 0, 0)
+      
       const diffTime = target - today
       days = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
     }
@@ -88,14 +92,21 @@ export default function AdminPage() {
 
     setBusy(true)
     try {
-      await updateStreak(days)
-      if (inputMsg !== message) {
-        await updateMessage(inputMsg)
-      }
-      // Enable auto mode downwards to decrement daily
       const d = new Date()
       const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-      await updateAutoMode({ enabled: true, direction: 'down', lastRunDate: todayStr })
+      
+      const updates = {
+        newValue: days,
+        autoModeEnabled: true,
+        autoModeDirection: 'down',
+        lastRunDate: todayStr
+      }
+      
+      if (inputMsg !== message) {
+        updates.newMessage = inputMsg
+      }
+      
+      await updateAll(updates)
       
       setTargetDays('')
       setTargetDate('')
